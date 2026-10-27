@@ -35,8 +35,8 @@ Proyecto Integrador: Implementación de Infraestructura con Supabase e IA.
 
 | Campo | Valor |
 |---|---|
-| Materia | [Materia] |
-| Integrantes | [Integrantes] |
+| Materia | SWNT |
+| Integrante | Josué David Hernández Martínez |
 | Fecha de entrega | 29 de octubre de 2026 |
 | Repositorio | {REPO_URL} |
 

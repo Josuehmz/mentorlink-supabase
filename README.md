@@ -6,6 +6,8 @@ asistente de IA, aplicadas con la CLI de Supabase en un Supabase local y verific
 pruebas pgTAP (`supabase test db`) y 25 comprobaciones de RLS.
 
 - **Documento único de la entrega:** [`ENTREGA.md`](ENTREGA.md) (también en PDF: [`ENTREGA.pdf`](ENTREGA.pdf)).
+- **Materia:** SWNT.
+- **Integrante:** Josué David Hernández Martínez.
 - **Fecha de entrega:** 29 de octubre de 2026.
 - **Qué es real:** la CLI de Supabase 2.122.0 se ejecutó (`init`, `migration new`, `start`,
   `db reset`, `migration list --local`, `test db`, `stop`) con la salida guardada en

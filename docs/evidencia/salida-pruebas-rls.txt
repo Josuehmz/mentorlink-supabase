@@ -1,0 +1,37 @@
+== Servidor: PostgreSQL 17.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+== 1. Stub de Supabase (roles, auth.users, auth.uid(), privilegios por defecto)
+== 2. Migración: supabase/migrations/20261027000855_inicializar_esquema.sql
+   tablas: mensajes (rls=true), perfiles (rls=true), sesiones (rls=true)
+   políticas: 7
+== 3. Seed (dentro de una transacción revertida)
+perfiles creados por el seed: 2
+== 4. Pruebas de RLS: supabase/pruebas/rls.sql
+NOTICE:  OK 01 handle_new_user crea los 4 perfiles con rol y nombre correctos (rol "admin" -> estudiante)
+NOTICE:  OK 02 anon no tiene privilegios sobre perfiles (permission denied)
+NOTICE:  OK 02 anon no tiene privilegios sobre mensajes (permission denied)
+NOTICE:  OK 03 Beto ve su perfil y el directorio de mentores, no a otros estudiantes
+NOTICE:  OK 04 Beto solicita una sesión con Ana (pendiente, fecha futura)
+NOTICE:  OK 05 Beto no puede crear sesiones a nombre de otra estudiante (RLS)
+NOTICE:  OK 06 no se puede solicitar una sesión con fecha pasada (RLS)
+NOTICE:  OK 07 una sesión nueva solo puede nacer pendiente (RLS)
+NOTICE:  OK 08 mentor_id debe tener rol mentor (trigger validar_roles_sesion)
+NOTICE:  OK 09 Beto escribe en su sesión
+NOTICE:  OK 10 nadie puede enviar mensajes con otro remitente_id (RLS)
+NOTICE:  OK 11 un mensaje vacío lo rechaza el check de contenido
+NOTICE:  OK 12 nadie puede cambiar su rol desde el cliente (privilegio por columna)
+NOTICE:  OK 13 Beto edita su bio y no la de Ana (0 filas)
+NOTICE:  OK 14 los mensajes no se editan (sin privilegio UPDATE)
+NOTICE:  OK 14 los mensajes no se borran (sin privilegio DELETE)
+NOTICE:  OK 14 las sesiones no se borran, se cancelan (sin privilegio DELETE)
+NOTICE:  OK 15 el estudiante no puede confirmar la sesión (trigger de transiciones)
+NOTICE:  OK 16 Ana ve su sesión, su mensaje y a Beto (contraparte), no a Carla
+NOTICE:  OK 17 la mentora confirma la sesión (pendiente -> confirmada)
+NOTICE:  OK 18 Ana responde en la sesión
+NOTICE:  OK 19 Carla ve 0 sesiones, 0 mensajes y no ve a Beto
+NOTICE:  OK 20 Carla no puede modificar la sesión ajena (0 filas)
+NOTICE:  OK 21 Carla no puede escribir en una sesión ajena aunque adivine el id (RLS)
+NOTICE:  OK 22 un participante cancela la sesión (confirmada -> cancelada)
+NOTICE:  OK 23 una sesión cancelada no se reabre (estado final)
+NOTICE:  OK 24 no se escribe en sesiones canceladas o completadas (RLS)
+NOTICE:  OK 25 la regla de roles también aplica a service_role (trigger)
+NOTICE:  TODAS LAS PRUEBAS DE RLS PASARON

@@ -1,0 +1,19 @@
+Revisé tu migración y la ejecuté en PostgreSQL 17 con una prueba de RLS de tres usuarios.
+Pasaron 14 comprobaciones; falló esta: el estudiante pudo poner su propia sesión en
+"confirmada" (UPDATE de estado sin reglas). Corrige solo lo siguiente y devuelve la migración
+completa otra vez, en el mismo formato de salida (bloque sql, tabla de políticas, riesgos):
+
+1. Máquina de estados en sesiones, con un trigger BEFORE UPDATE (security definer,
+   set search_path = ''), errcode check_violation:
+   - pendiente  -> confirmada : solo el mentor de la sesión
+   - pendiente  -> cancelada  : cualquiera de los dos participantes
+   - confirmada -> completada : solo el mentor
+   - confirmada -> cancelada  : cualquiera de los dos
+   - completada y cancelada son estados finales: no cambian.
+   - Si cambia fecha: solo en pendiente o confirmada y siempre a futuro.
+   - Cuando auth.uid() es null (service_role o SQL del dashboard) valida las transiciones, pero
+     no quién las hace.
+2. mensajes: solo se puede INSERTAR en sesiones en estado pendiente o confirmada (añádelo a la
+   política de INSERT, no a un trigger).
+3. Quita actualizado_en y su trigger de mensajes: los mensajes no se editan.
+4. Nada más cambia: mismos nombres de tablas, tipos, políticas, privilegios e índices.

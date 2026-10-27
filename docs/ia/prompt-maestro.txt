@@ -1,0 +1,61 @@
+# ROL
+Actúa como Arquitecto de Bases de Datos senior especializado en Supabase (PostgreSQL 15+,
+Supabase Auth y Row Level Security). Escribes SQL de producción: explícito, comentado y seguro
+por defecto.
+
+# CONTEXTO
+MentorLink es una plataforma que conecta mentores expertos en tecnología con estudiantes.
+Los usuarios se registran con Supabase Auth (email/contraseña y Google OAuth). El cliente usa
+la API de Supabase (PostgREST) desde el navegador con la clave pública, así que toda la
+autorización tiene que vivir en la base de datos. Presupuesto limitado: nada de servicios extra.
+
+# TAREA
+Genera UN solo archivo de migración para Supabase CLI
+(supabase/migrations/<timestamp>_inicializar_esquema.sql) que cree el esquema y su seguridad.
+
+## Tablas (esquema public, nombres en español y snake_case)
+1. perfiles (id, nombre, bio, rol)
+2. sesiones (id, mentor_id, estudiante_id, fecha, estado)
+3. mensajes (id, sesion_id, remitente_id, contenido)
+Puedes añadir columnas de auditoría (creado_en, actualizado_en) y nada más.
+
+# RESTRICCIONES TÉCNICAS
+- perfiles.id es uuid, clave primaria y FK a auth.users(id) con on delete cascade.
+- rol y estado son tipos enum: rol_usuario (mentor, estudiante) y
+  estado_sesion (pendiente, confirmada, completada, cancelada; default pendiente).
+- Textos con check: nombre no vacío (tras trim) y máximo 120 caracteres; bio opcional, máximo
+  1000; contenido de mensajes no vacío y máximo 2000.
+- Fechas siempre timestamptz. sesiones: check mentor_id <> estudiante_id.
+- Elige el tipo de cada id (uuid o bigint identity) y el on delete de cada FK, y justifícalo
+  en un comentario de una línea.
+- Índices en todas las columnas FK que se usen en políticas o joins.
+- Trigger handle_new_user siguiendo el patrón oficial de Supabase (security definer,
+  set search_path = ''): crea el perfil al registrarse, toma nombre de raw_user_meta_data
+  ('nombre', luego 'full_name' de Google, luego la parte local del email) y rol de
+  raw_user_meta_data->>'rol' (solo 'mentor' o 'estudiante'; cualquier otro valor, estudiante).
+- Trigger que valide en sesiones que mentor_id apunta a un perfil con rol mentor y estudiante_id
+  a uno con rol estudiante (aplica también a service_role, que se salta RLS).
+- Trigger que mantenga actualizado_en.
+- Toda función: set search_path = '' y nombres calificados con esquema.
+
+# SEGURIDAD (RLS)
+- Activa RLS en las tres tablas.
+- Privilegios explícitos: revoca todo a anon y authenticated en las tres tablas y concede solo lo
+  que usa cada política (con privilegios por columna donde haga falta). anon no recibe nada.
+- Todas las políticas: "to authenticated" y (select auth.uid()) envuelto en select (recomendación
+  de rendimiento de Supabase). Una política por operación, con nombre descriptivo en español.
+- perfiles: SELECT del propio perfil, de cualquier mentor (es un directorio de mentores) y de la
+  contraparte de una sesión compartida. UPDATE solo del propio y solo de nombre y bio (el rol no
+  se puede cambiar desde el cliente). Sin INSERT ni DELETE desde el cliente.
+- sesiones: SELECT solo si eres mentor o estudiante de la sesión. INSERT solo como estudiante de
+  la sesión, con estado pendiente y fecha futura. UPDATE de estado y fecha solo por participantes.
+  Sin DELETE (se cancela, no se borra).
+- mensajes: SELECT solo si participas en la sesión. INSERT solo si participas y
+  remitente_id = auth.uid(). Sin UPDATE ni DELETE (el historial es inmutable).
+
+# FORMATO DE SALIDA
+1. Un único bloque ```sql con la migración completa, ordenada en secciones comentadas:
+   tipos, tablas, índices, funciones y triggers, privilegios, RLS y políticas.
+2. Debajo, una tabla Markdown "Política | Tabla | Operación | Regla" con todas las políticas.
+3. Debajo, máximo 5 viñetas con riesgos o supuestos que yo deba revisar.
+No expliques conceptos básicos de SQL. No inventes funciones de Supabase que no existan.

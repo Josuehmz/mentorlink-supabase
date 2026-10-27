@@ -1,12 +1,13 @@
 == Servidor: PostgreSQL 17.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
 == 1. Stub de Supabase (roles, auth.users, auth.uid(), privilegios por defecto)
-== 2. Migración: supabase/migrations/20261027000855_inicializar_esquema.sql
+== 2. Migración: supabase/migrations/20261027004403_inicializar_esquema.sql
    tablas: mensajes (rls=true), perfiles (rls=true), sesiones (rls=true)
    políticas: 7
 == 3. Seed (dentro de una transacción revertida)
 perfiles creados por el seed: 2
 == 4. Pruebas de RLS: supabase/pruebas/rls.sql
-NOTICE:  OK 01 handle_new_user crea los 4 perfiles con rol y nombre correctos (rol "admin" -> estudiante)
+NOTICE:  OK 01 handle_new_user crea los 4 perfiles como estudiante aunque pidan "mentor" o "admin" (sonda del rol)
+NOTICE:  OK 01 service_role promueve a Ana y a Dario a mentor
 NOTICE:  OK 02 anon no tiene privilegios sobre perfiles (permission denied)
 NOTICE:  OK 02 anon no tiene privilegios sobre mensajes (permission denied)
 NOTICE:  OK 03 Beto ve su perfil y el directorio de mentores, no a otros estudiantes

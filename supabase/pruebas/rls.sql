@@ -3,6 +3,8 @@
 -- Simula tres usuarios reales con `set local role authenticated` y
 -- `set local request.jwt.claims`, que es lo mismo que hace la API de Supabase con cada JWT.
 -- Todo corre dentro de una transacción que termina en ROLLBACK: no deja datos.
+-- Los conteos se limitan a los 4 usuarios de la prueba, así que también corre sobre una base
+-- que ya tiene el seed (por ejemplo, justo después de `supabase db reset`).
 --
 -- Cómo correrla:
 --   Con Supabase local:  psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/pruebas/rls.sql
@@ -10,10 +12,10 @@
 -- Cada comprobación imprime "OK NN ..." ; si una falla, se detiene con "FALLO NN ...".
 --
 -- Usuarios de la prueba (uuid fijos):
---   Ana   11111111-...  mentora
+--   Ana   11111111-...  mentora (se registra pidiendo rol "mentor"; la promueve service_role)
 --   Beto  22222222-...  estudiante, dueño de la sesión
 --   Carla 33333333-...  estudiante ajena (intrusa); se registra pidiendo rol "admin"
---   Dario 44444444-...  segundo mentor, sin sesiones
+--   Dario 44444444-...  segundo mentor, sin sesiones (también promovido por service_role)
 
 \set ON_ERROR_STOP on
 begin;
@@ -27,15 +29,30 @@ insert into auth.users (id, email, raw_user_meta_data) values
   ('33333333-3333-3333-3333-333333333333', 'carla@ejemplo.com', '{"rol": "admin"}'),
   ('44444444-4444-4444-4444-444444444444', 'dario@ejemplo.com', '{"nombre": "Dario Mentor", "rol": "mentor"}');
 
+-- Sonda del rol: lo que el cliente manda en signUp (options.data.rol) no decide el rol.
 do $$
 begin
-  if (select rol from public.perfiles where id = '11111111-1111-1111-1111-111111111111') <> 'mentor' then
-    raise exception 'FALLO 01: Ana debía quedar como mentor'; end if;
+  if exists (select 1 from public.perfiles where rol <> 'estudiante' and id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+                   '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444')) then
+    raise exception 'FALLO 01: un registro nació con un rol distinto de estudiante (el cliente eligió su rol)'; end if;
   if (select nombre from public.perfiles where id = '22222222-2222-2222-2222-222222222222') <> 'Beto Estudiante' then
     raise exception 'FALLO 01: el nombre de Google (full_name) no se tomó'; end if;
-  if (select rol::text || '/' || nombre from public.perfiles where id = '33333333-3333-3333-3333-333333333333') <> 'estudiante/carla' then
-    raise exception 'FALLO 01: un rol inválido debía caer en estudiante y el nombre en la parte local del email'; end if;
-  raise notice 'OK 01 handle_new_user crea los 4 perfiles con rol y nombre correctos (rol "admin" -> estudiante)';
+  if (select nombre from public.perfiles where id = '33333333-3333-3333-3333-333333333333') <> 'carla' then
+    raise exception 'FALLO 01: sin nombre, debía usarse la parte local del email'; end if;
+  raise notice 'OK 01 handle_new_user crea los 4 perfiles como estudiante aunque pidan "mentor" o "admin" (sonda del rol)';
+end $$;
+
+-- Promover a mentor es administrativo: service_role (backend o SQL del Dashboard).
+set local role service_role;
+update public.perfiles set rol = 'mentor'
+where id in ('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444');
+reset role;
+do $$
+begin
+  if (select count(*) from public.perfiles where rol = 'mentor' and id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+                   '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444')) <> 2 then
+    raise exception 'FALLO 01: service_role debía poder promover a Ana y a Dario'; end if;
+  raise notice 'OK 01 service_role promueve a Ana y a Dario a mentor';
 end $$;
 
 -- ============================================================
@@ -68,7 +85,8 @@ set local request.jwt.claims = '{"sub": "22222222-2222-2222-2222-222222222222", 
 do $$
 declare n int;
 begin
-  select count(*) into n from public.perfiles;
+  select count(*) into n from public.perfiles where id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+                   '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444');
   if n <> 3 then raise exception 'FALLO 03: Beto debía ver 3 perfiles (él y los 2 mentores) y ve %', n; end if;
   if exists (select 1 from public.perfiles where id = '33333333-3333-3333-3333-333333333333') then
     raise exception 'FALLO 03: Beto ve el perfil de otra estudiante'; end if;

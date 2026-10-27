@@ -1,4 +1,4 @@
--- supabase/migrations/20261027000855_inicializar_esquema.sql
+-- supabase/migrations/20261027004403_inicializar_esquema.sql
 -- MentorLink: esquema inicial (perfiles, sesiones, mensajes) con RLS y privilegios explícitos.
 
 -- =====================================================================
@@ -83,6 +83,10 @@ create trigger sesiones_fijar_actualizado_en
   for each row execute function public.fijar_actualizado_en();
 
 -- 4.2 Crear el perfil al registrarse (patrón oficial de Supabase)
+--   El rol NO se toma de raw_user_meta_data: ese campo lo escribe el cliente en signUp
+--   (options.data), así que cualquiera podría registrarse como mentor. Todo registro nace
+--   'estudiante'; promover a mentor es una acción administrativa con service_role
+--   (backend o SQL del Dashboard), porque authenticated no tiene UPDATE sobre perfiles.rol.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -92,7 +96,6 @@ as $$
 declare
   v_meta   jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   v_nombre text;
-  v_rol    public.rol_usuario;
 begin
   v_nombre := coalesce(
     nullif(pg_catalog.btrim(v_meta ->> 'nombre'), ''),
@@ -102,14 +105,8 @@ begin
   );
   v_nombre := pg_catalog.left(v_nombre, 120);
 
-  v_rol := case
-             when v_meta ->> 'rol' in ('mentor', 'estudiante')
-               then (v_meta ->> 'rol')::public.rol_usuario
-             else 'estudiante'::public.rol_usuario
-           end;
-
   insert into public.perfiles (id, nombre, rol)
-  values (new.id, v_nombre, v_rol);
+  values (new.id, v_nombre, 'estudiante'::public.rol_usuario);
 
   return new;
 end;

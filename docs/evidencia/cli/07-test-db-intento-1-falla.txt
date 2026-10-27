@@ -1,0 +1,25 @@
+# Fecha: 2026-10-26 19:59:24 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase test db --agent no
+# (omitidas 14 líneas de progreso de descarga de capas de Docker: '<hash>: Pull complete' y 'Digest:')
+Connecting to local database...
+3.36: Pulling from supabase/pg_prove
+Status: Downloaded newer image for public.ecr.aws/supabase/pg_prove:3.36
+public.ecr.aws/supabase/pg_prove:3.36
+psql:/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql:14: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql:27: ERROR:  permission denied to set role "supabase_auth_admin"
+/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql .. 
+Dubious, test returned 3 (wstat 768, 0x300)
+Failed 41/41 subtests 
+
+Test Summary Report
+-------------------
+/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql (Wstat: 768 (exited 3) Tests: 0 Failed: 0)
+  Non-zero exit status: 3
+  Parse errors: Bad plan.  You planned 41 tests but ran 0.
+Files=1, Tests=0,  0 wallclock secs ( 0.08 usr  0.08 sys +  0.03 cusr  0.04 csys =  0.23 CPU)
+Result: FAIL
+error running container: exit 1
+Try rerunning the command with --debug to troubleshoot the error.
+# Código de salida: 1

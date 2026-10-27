@@ -1,0 +1,6 @@
+# Fecha: 2026-10-26 19:43:59 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase migration new inicializar_esquema --agent no
+Created new migration at supabase\migrations\20261027004403_inicializar_esquema.sql
+# Código de salida: 0

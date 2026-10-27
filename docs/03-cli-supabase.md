@@ -1,135 +1,207 @@
 # 3. Supabase CLI: comandos y evidencia
 
-Esta sección documenta cómo se crea y se aplica la migración con la CLI de Supabase. **En el equipo
-donde se hizo el trabajo no está instalada la CLI de Supabase**, así que los comandos de la CLI se
-presentan como **simulados**: la secuencia es la correcta según la documentación oficial y la
-salida que se muestra es la **esperada**, no capturada. Lo que sí se ejecutó de verdad es el SQL:
-la migración y las pruebas de RLS corrieron en PostgreSQL 17 dentro de Docker (sección 3.3).
+Esta sección documenta cómo se crea, se aplica y se prueba la migración con la CLI de Supabase.
+**La CLI se ejecutó de verdad** (Supabase CLI 2.122.0, Windows 11 con Docker Desktop, 26 de
+octubre de 2026) contra un Supabase local levantado con `supabase start`. Cada comando dejó su
+salida, con fecha, versión y código de salida, en [`evidencia/cli/`](evidencia/cli/). Los pasos
+que necesitan un proyecto en la nube (`login`, `link`, `db push`) **no se ejecutaron**, porque
+ese proyecto no existe; quedan documentados en la sección 3.3.
 
-## 3.1 Qué es real y qué es simulado
+## 3.1 Qué es real y qué no se ejecutó
 
 | Elemento | Estado | Evidencia |
 |---|---|---|
-| Estructura `supabase/migrations/<timestamp>_inicializar_esquema.sql` | Real (archivo creado a mano con el formato de nombre de la CLI: `date -u +%Y%m%d%H%M%S`) | [`supabase/migrations/`](../supabase/migrations/) |
-| `supabase init`, `login`, `link`, `migration new`, `db push`, `migration list`, `db reset` | **Simulado** | Sección 3.2 |
-| Migración aplicada a un PostgreSQL 17 | **Real** | [`evidencia/salida-pruebas-rls.txt`](evidencia/salida-pruebas-rls.txt) |
-| Pruebas de RLS con cuatro usuarios | **Real** (25 de 25) | Misma salida |
-| Proyecto remoto de Supabase | No existe | El `<project-ref>` es un marcador |
+| `supabase --version`, `init`, `migration new inicializar_esquema` | **Ejecutado** | [`01`](evidencia/cli/01-version.txt), [`02`](evidencia/cli/02-init.txt), [`03`](evidencia/cli/03-migration-new.txt) |
+| `supabase start` (solo db, auth, rest y kong) | **Ejecutado**: aplicó la migración y el seed | [`04-start.txt`](evidencia/cli/04-start.txt) |
+| `supabase db reset` | **Ejecutado** | [`05-db-reset.txt`](evidencia/cli/05-db-reset.txt) |
+| `supabase migration list --local` | **Ejecutado**: una sola migración, aplicada | [`06-migration-list-local.txt`](evidencia/cli/06-migration-list-local.txt) |
+| `supabase test db` (pgTAP) | **Ejecutado**: 41 de 41 | [`08-test-db.txt`](evidencia/cli/08-test-db.txt) y detalle [`09`](evidencia/cli/09-test-db-detalle-tap.txt) |
+| `supabase status`, `supabase stop --no-backup` | **Ejecutado** (claves como `<redactado>`) | [`10-status.txt`](evidencia/cli/10-status.txt), [`13-stop.txt`](evidencia/cli/13-stop.txt) |
+| Prueba con avisos `supabase/pruebas/rls.sql` en el Supabase local | **Ejecutado**: 25 de 25 | [`12-rls-sql-en-supabase-local.txt`](evidencia/cli/12-rls-sql-en-supabase-local.txt) |
+| `supabase login`, `link`, `db push --dry-run`, `db push`, `migration list` remoto | **No ejecutado**: no hay proyecto en la nube | Sección 3.3 |
 
-## 3.2 Secuencia de comandos (simulados)
+## 3.2 Log real: Supabase local
 
-Requisitos: Supabase CLI instalada (por ejemplo `npx supabase <comando>` o el binario de la
-página de instalación) y, para el entorno local, Docker en marcha.
+Todos los comandos se corrieron desde la raíz del repositorio. Se añadió `--agent no` porque la
+CLI 2.122.0 detecta que la terminal no es interactiva y, sin esa opción, responde en JSON en vez
+de texto (pasó con el primer `migration new`; ese archivo vacío se borró y el comando se repitió).
+Las salidas largas están completas en cada archivo; aquí van los fragmentos que importan.
 
-### Paso 1. Inicializar el proyecto
+### Paso 1. Versión e inicialización
 
-```bash
-supabase init
+```text
+$ supabase --version
+2.122.0
+
+$ supabase init
+Finished supabase init.
 ```
 
-Crea la carpeta `supabase/` con `config.toml`. Salida esperada (no capturada): `Finished supabase init.`
+`init` creó [`supabase/config.toml`](../supabase/config.toml) (`project_id = "mentorlink-supabase"`,
+Postgres 17, seed `./seed.sql`) y `supabase/.gitignore`. No se editó.
 
-### Paso 2. Iniciar sesión en la cuenta de Supabase
+### Paso 2. Crear la migración
 
-```bash
-supabase login
+```text
+$ supabase migration new inicializar_esquema --agent no
+Created new migration at supabase\migrations\20261027004403_inicializar_esquema.sql
 ```
 
-Abre el navegador para autorizar la CLI y guarda un token de acceso local. Salida esperada:
-`You are now logged in. Happy coding!`. En CI se usa la variable `SUPABASE_ACCESS_TOKEN` en vez de
-este comando.
+El archivo vacío que creó la CLI recibió el SQL ([sección 1.8](01-esquema-y-rls.md#18-script-sql-completo))
+y la versión anterior, que tenía un nombre puesto a mano, se eliminó: en
+[`supabase/migrations/`](../supabase/migrations/) queda una sola migración,
+[`20261027004403_inicializar_esquema.sql`](../supabase/migrations/20261027004403_inicializar_esquema.sql).
 
-### Paso 3. Vincular el proyecto remoto
-
-```bash
-supabase link --project-ref <project-ref>
-```
-
-`<project-ref>` es el identificador del proyecto (el subdominio de `https://<project-ref>.supabase.co`,
-también en Project Settings). Pide la contraseña de la base de datos. Salida esperada:
-`Finished supabase link.`
-
-### Paso 4. Crear la migración
+### Paso 3. Levantar Supabase local con lo mínimo
 
 ```bash
-supabase migration new inicializar_esquema
+supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,postgres-meta
 ```
 
-Crea un archivo vacío con la marca de tiempo UTC. Salida esperada:
-`Created new migration at supabase/migrations/<timestamp>_inicializar_esquema.sql`.
-En este repositorio ese archivo es
-[`20261027000855_inicializar_esquema.sql`](../supabase/migrations/20261027000855_inicializar_esquema.sql)
-y su contenido es el SQL generado por la IA ([sección 2](02-prompts-ia.md)).
+Los nombres de `-x` son los que lista `supabase start --help`. Quedan en marcha Postgres, GoTrue
+(Auth), PostgREST y Kong, que es lo que necesita la migración. Fragmento de
+[`04-start.txt`](evidencia/cli/04-start.txt):
 
-### Paso 5. Probar en local antes de tocar el remoto (opcional, recomendado)
+```text
+Starting database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20261027004403_inicializar_esquema.sql...
+Seeding data from supabase/seed.sql...
+Starting containers...
+Waiting for health checks...
+Started supabase local development setup.
+```
+
+Aun con `-x`, la CLI descargó las imágenes de `realtime` y `storage-api` para inicializar sus
+esquemas; no dejó esos contenedores corriendo (ver [`10-status.txt`](evidencia/cli/10-status.txt)).
+
+### Paso 4. Recrear la base: migración y seed
+
+```text
+$ supabase db reset --agent no
+Resetting local database...
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20261027004403_inicializar_esquema.sql...
+Seeding data from supabase/seed.sql...
+Restarting containers...
+Finished supabase db reset on branch main.
+```
+
+El seed deja a «Mentora Demo» como `mentor` (promovida con un `update`, como haría un
+administrador) y a «Estudiante Demo» como `estudiante`; la consulta está al inicio de
+[`11-rls-sql-en-supabase-local-intento-1-falla.txt`](evidencia/cli/11-rls-sql-en-supabase-local-intento-1-falla.txt).
+
+### Paso 5. Historial de migraciones
+
+```text
+$ supabase migration list --local --agent no
+Connecting to local database...
+
+   Local            | Remote           | Time (UTC)
+  ------------------|------------------|-----------------------
+   `20261027004403` | `20261027004403` | `2026-10-27 00:44:03`
+```
+
+Con `--local`, la columna `Remote` es la base local: la migración está en el disco y aplicada.
+
+### Paso 6. Pruebas pgTAP
+
+```text
+$ supabase test db --agent no
+Connecting to local database...
+.../supabase/tests/mentorlink_rls_test.sql .. ok
+All tests successful.
+Files=1, Tests=41,  1 wallclock secs ( 0.14 usr  0.09 sys +  0.05 cusr  0.06 csys =  0.34 CPU)
+Result: PASS
+```
+
+[`supabase/tests/mentorlink_rls_test.sql`](../supabase/tests/mentorlink_rls_test.sql) tiene 41
+pruebas. `pg_prove` solo imprime el resumen; la lista `ok 1` … `ok 41` con el nombre de cada
+prueba está en [`09-test-db-detalle-tap.txt`](evidencia/cli/09-test-db-detalle-tap.txt) (el mismo
+archivo pasado por `psql` en el contenedor de la base).
+
+El primer intento falló antes de la primera prueba
+([`07-test-db-intento-1-falla.txt`](evidencia/cli/07-test-db-intento-1-falla.txt)): la prueba hacía
+`set role supabase_auth_admin` para registrar un usuario como lo hace GoTrue, y en Supabase local el
+rol `postgres` no tiene ese permiso. El usuario se inserta ahora como `postgres`; el trigger
+`handle_new_user` es el mismo.
+
+La prueba con avisos [`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql) también corrió contra
+esta base: 25 de 25 ([`12-rls-sql-en-supabase-local.txt`](evidencia/cli/12-rls-sql-en-supabase-local.txt)).
+Su primer intento falló porque contaba todos los perfiles y el seed ya tenía una mentora
+([`11`](evidencia/cli/11-rls-sql-en-supabase-local-intento-1-falla.txt)); los conteos se limitaron a
+los cuatro usuarios de la prueba.
+
+### Paso 7. Estado y apagado
+
+`supabase status` ([`10-status.txt`](evidencia/cli/10-status.txt)) muestra `Not linked.` (no hay
+proyecto en la nube), los servicios excluidos y las URL locales; las claves aparecen como
+`<redactado>`. Al final:
+
+```text
+$ supabase stop --no-backup --agent no
+Stopping containers...
+Stopped supabase local development setup.
+```
+
+## 3.3 Pasos del proyecto en la nube (no ejecutados)
+
+No existe un proyecto de Supabase en la nube para MentorLink, así que estos pasos **no se
+ejecutaron** y no hay salida que mostrar. Esta es la secuencia, según la documentación oficial:
 
 ```bash
-supabase start          # levanta Postgres, Auth y la API en Docker
-supabase db reset       # recrea la base local: aplica migrations/ y luego seed.sql
-psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/pruebas/rls.sql
+supabase login                              # abre el navegador y guarda un token local
+supabase link --project-ref <project-ref>   # pide la contraseña de la base del proyecto
+supabase db push --dry-run                  # muestra qué migraciones aplicaría, sin aplicarlas
+supabase db push                            # aplica 20261027004403_inicializar_esquema.sql
+supabase migration list                     # Local y Remote deberían mostrar 20261027004403
 ```
 
-Salida esperada de `db reset`: líneas `Applying migration 20261027000855_inicializar_esquema.sql...`
-y `Seeding data from supabase/seed.sql...`, y al final `Finished supabase db reset`. La prueba
-debería imprimir lo mismo que la corrida real de la sección 3.3.
+- `<project-ref>` es el subdominio de `https://<project-ref>.supabase.co` (también en Project
+  Settings). En CI se usa la variable `SUPABASE_ACCESS_TOKEN` en vez de `supabase login`.
+- `db push` no envía `seed.sql` salvo con `--include-seed`. En la nube, los mentores se promueven
+  con `update public.perfiles set rol = 'mentor' ...` desde el SQL Editor o el backend.
+- `supabase test db --linked` correría las mismas 41 pruebas contra el proyecto vinculado.
 
-### Paso 6. Aplicar la migración al proyecto remoto
+## 3.4 Prueba previa sin la CLI (PostgreSQL 17 con un stub)
 
-```bash
-supabase db push --dry-run   # muestra qué migraciones aplicaría, sin aplicarlas
-supabase db push             # aplica las migraciones pendientes al proyecto vinculado
-```
-
-Salida esperada de `db push`: pregunta `Do you want to push these migrations to the remote
-database?` con la lista `• 20261027000855_inicializar_esquema.sql`, y tras confirmar,
-`Applying migration 20261027000855_inicializar_esquema.sql...` y `Finished supabase db push.`
-`seed.sql` no se envía al remoto salvo con `--include-seed`.
-
-### Paso 7. Comprobar el historial
-
-```bash
-supabase migration list
-```
-
-Salida esperada: una tabla con columnas `Local`, `Remote` y `Time (UTC)` donde
-`20261027000855` aparece en ambas columnas (aplicada en local y en remoto).
-
-## 3.3 Evidencia real: la migración corriendo en PostgreSQL 17 (Docker)
-
-Sin la CLI, el SQL se probó con [`pruebas-locales/ejecutar-pruebas.sh`](../pruebas-locales/ejecutar-pruebas.sh),
-que levanta un contenedor desechable `postgres:17-alpine`, carga un stub con lo que Supabase ya trae
-antes de cualquier migración ([`pruebas-locales/stub-supabase.sql`](../pruebas-locales/stub-supabase.sql):
-roles `anon`, `authenticated` y `service_role`, la tabla `auth.users`, la función `auth.uid()` con
-la misma definición que en Supabase y los privilegios por defecto), aplica la migración, aplica el
-seed dentro de una transacción revertida y corre [`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql).
+Antes de usar la CLI, el SQL se probó con
+[`pruebas-locales/ejecutar-pruebas.sh`](../pruebas-locales/ejecutar-pruebas.sh): un contenedor
+desechable `postgres:17-alpine` con un stub de lo que Supabase trae antes de cualquier migración
+([`pruebas-locales/stub-supabase.sql`](../pruebas-locales/stub-supabase.sql): roles `anon`,
+`authenticated` y `service_role`, la tabla `auth.users`, `auth.uid()` y los privilegios por
+defecto). Sigue sirviendo como prueba rápida sin la CLI:
 
 ```bash
 bash pruebas-locales/ejecutar-pruebas.sh
 ```
 
-Inicio de la salida capturada (completa en [`evidencia/salida-pruebas-rls.txt`](evidencia/salida-pruebas-rls.txt)):
+Inicio de la salida (completa en [`evidencia/salida-pruebas-rls.txt`](evidencia/salida-pruebas-rls.txt)):
 
 ```text
 == Servidor: PostgreSQL 17.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
 == 1. Stub de Supabase (roles, auth.users, auth.uid(), privilegios por defecto)
-== 2. Migración: supabase/migrations/20261027000855_inicializar_esquema.sql
+== 2. Migración: supabase/migrations/20261027004403_inicializar_esquema.sql
    tablas: mensajes (rls=true), perfiles (rls=true), sesiones (rls=true)
    políticas: 7
 == 3. Seed (dentro de una transacción revertida)
 perfiles creados por el seed: 2
 == 4. Pruebas de RLS: supabase/pruebas/rls.sql
-NOTICE:  OK 01 handle_new_user crea los 4 perfiles con rol y nombre correctos (rol "admin" -> estudiante)
+NOTICE:  OK 01 handle_new_user crea los 4 perfiles como estudiante aunque pidan "mentor" o "admin" (sonda del rol)
+NOTICE:  OK 01 service_role promueve a Ana y a Dario a mentor
 ...
 NOTICE:  OK 25 la regla de roles también aplica a service_role (trigger)
 NOTICE:  TODAS LAS PRUEBAS DE RLS PASARON
 ```
 
-Límite de esta prueba: el stub no es Supabase completo (no hay GoTrue ni PostgREST). Prueba el SQL,
-los privilegios y las políticas con los mismos roles y la misma `auth.uid()`; no prueba el flujo
-HTTP de la API ni el inicio de sesión real.
+El stub no tiene GoTrue ni PostgREST; por eso la evidencia principal es la de la sección 3.2.
 
 ## Fuentes
 
 - Primeros pasos con la CLI: https://supabase.com/docs/guides/local-development/cli/getting-started
-- Referencia de la CLI (`init`, `login`, `link`, `migration new`, `db push`, `migration list`, `db reset`): https://supabase.com/docs/reference/cli/introduction
+- Referencia de la CLI (`init`, `start`, `migration new`, `db reset`, `migration list`, `test db`, `link`, `db push`): https://supabase.com/docs/reference/cli/introduction
+- Pruebas de base de datos con pgTAP: https://supabase.com/docs/guides/local-development/testing/overview
 - Migraciones de base de datos: https://supabase.com/docs/guides/deployment/database-migrations

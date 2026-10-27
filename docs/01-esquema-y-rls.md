@@ -6,13 +6,16 @@ través de la API de Supabase usando la clave pública, así que **la autorizaci
 datos**: privilegios por tabla y columna, políticas RLS por fila y triggers para las reglas de
 negocio.
 
-- Fuente de verdad: [`supabase/migrations/20261027000855_inicializar_esquema.sql`](../supabase/migrations/20261027000855_inicializar_esquema.sql) (334 líneas).
+- Fuente de verdad: [`supabase/migrations/20261027004403_inicializar_esquema.sql`](../supabase/migrations/20261027004403_inicializar_esquema.sql) (331 líneas), creado con `supabase migration new inicializar_esquema`.
 - La sección [1.8](#18-script-sql-completo) es una copia exacta de ese archivo, sincronizada por
   [`herramientas/armar_entrega.py`](../herramientas/armar_entrega.py) (`--verificar` falla si difieren).
 - Origen: generado con un asistente de IA a partir del [prompt maestro](02-prompts-ia.md), ejecutado,
   probado y corregido con un prompt de refinamiento.
-- Verificado de verdad: la migración corre en PostgreSQL 17 y las 25 comprobaciones de
-  [`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql) pasan
+- Verificado de verdad con la CLI de Supabase: `supabase db reset` aplica la migración y el seed, y
+  `supabase test db` pasa las 41 pruebas pgTAP de
+  [`supabase/tests/mentorlink_rls_test.sql`](../supabase/tests/mentorlink_rls_test.sql)
+  ([salida](evidencia/cli/08-test-db.txt)). Además, las 25 comprobaciones de
+  [`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql) pasan en PostgreSQL 17
   ([salida completa](evidencia/salida-pruebas-rls.txt)).
 
 ## 1.1 Modelo de datos
@@ -117,7 +120,7 @@ sesión (pruebas 03, 16 y 19).
 
 | Función (trigger) | Cuándo | Qué hace |
 |---|---|---|
-| `handle_new_user` (`on_auth_user_created`) | `after insert on auth.users` | Crea el perfil. Nombre: `nombre` de los metadatos, si no `full_name` (Google), si no la parte local del email. Rol: `mentor` o `estudiante`; cualquier otro valor cae en `estudiante` (prueba 01). `security definer` y `set search_path = ''`, como el patrón oficial. |
+| `handle_new_user` (`on_auth_user_created`) | `after insert on auth.users` | Crea el perfil. Nombre: `nombre` de los metadatos, si no `full_name` (Google), si no la parte local del email. Rol: siempre `estudiante`; el `rol` que mande el cliente en los metadatos se ignora (prueba 01, sonda del rol). Promover a mentor lo hace `service_role`. `security definer` y `set search_path = ''`, como el patrón oficial. |
 | `validar_roles_sesion` (`sesiones_validar_roles`) | `before insert or update of mentor_id, estudiante_id` | `mentor_id` debe tener rol mentor y `estudiante_id` rol estudiante (pruebas 08 y 25). |
 | `validar_transicion_sesion` (`sesiones_validar_transicion`) | `before update of estado, fecha` | Máquina de estados: confirmar y completar solo el mentor; cancelar cualquiera de los dos; `completada` y `cancelada` son finales; la fecha solo cambia a futuro (pruebas 15, 17, 22 y 23). |
 | `fijar_actualizado_en` | `before update` en perfiles y sesiones | Mantiene `actualizado_en`. |
@@ -139,15 +142,39 @@ Máquina de estados de `sesiones`:
 
 ## 1.6 Verificación
 
+**Quién puede ser mentor.** `raw_user_meta_data` lo escribe el cliente en `signUp`
+(`options.data`), así que no sirve para decidir permisos. Todo registro nace `estudiante` y la
+promoción es una acción administrativa:
+
+```sql
+-- con service_role (backend) o desde el SQL Editor del Dashboard
+update public.perfiles set rol = 'mentor' where id = '<uuid-del-usuario>';
+```
+
+Desde la API nadie se promueve a sí mismo: `authenticated` no tiene `UPDATE` sobre la columna
+`rol` (prueba 12). La sonda que lo comprueba (un registro que pide `{"rol": "mentor"}` y nace
+`estudiante`) está en la prueba 01 de `rls.sql` y en la pgTAP «sonda del rol».
+
+### Pruebas pgTAP con `supabase test db`
+
+[`supabase/tests/mentorlink_rls_test.sql`](../supabase/tests/mentorlink_rls_test.sql) tiene 41
+pruebas pgTAP: estructura (RLS activo, grants, `(select auth.uid())`), `handle_new_user`, la sonda
+del rol, la promoción por `service_role`, `anon`, estudiante, mentor, intruso, transiciones de
+estado e integridad para roles privilegiados. Corrió con la CLI real contra Supabase local:
+[`evidencia/cli/08-test-db.txt`](evidencia/cli/08-test-db.txt).
+
+### Prueba con avisos (`rls.sql`)
+
 [`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql) simula cuatro usuarios con
 `set local role authenticated` y `set local request.jwt.claims` (lo mismo que hace la API de
-Supabase con cada JWT) y termina en `rollback`. Se ejecutó en PostgreSQL 17.9 (Docker) con
-[`pruebas-locales/ejecutar-pruebas.sh`](../pruebas-locales/ejecutar-pruebas.sh): 25 de 25 en verde
+Supabase con cada JWT) y termina en `rollback`. Pasó 25 de 25 contra el Supabase local de la CLI
+([salida](evidencia/cli/12-rls-sql-en-supabase-local.txt)) y en PostgreSQL 17.9 (Docker) con
+[`pruebas-locales/ejecutar-pruebas.sh`](../pruebas-locales/ejecutar-pruebas.sh), sin la CLI
 ([salida](evidencia/salida-pruebas-rls.txt)).
 
 | # | Qué se comprueba | Resultado esperado |
 |---|---|---|
-| 01 | `handle_new_user` con nombre, `full_name` de Google y rol inválido | perfiles correctos |
+| 01 | `handle_new_user` con nombre, `full_name` de Google, `rol: "mentor"` y `rol: "admin"`; luego `service_role` promueve a dos mentores | todos nacen `estudiante`; la promoción pasa |
 | 02 | `anon` lee perfiles o mensajes | `permission denied` |
 | 03 | Estudiante lista perfiles | se ve a sí mismo y a los mentores, no a otros estudiantes |
 | 04-07 | Solicitar sesión propia / a nombre de otro / en el pasado / ya confirmada | solo la primera pasa |
@@ -166,9 +193,6 @@ refinamiento descrito en [2. Prompts de IA](02-prompts-ia.md).
 
 ## 1.7 Riesgos aceptados
 
-- **Autoasignación de rol:** el rol se toma de `raw_user_meta_data`, que controla el cliente;
-  cualquiera puede registrarse como mentor. Si los mentores deben verificarse, se registra a todos
-  como `estudiante` y se promueve desde el backend con `service_role`.
 - **Cascadas:** borrar una cuenta borra sus sesiones y los mensajes de ambos participantes. Si el
   historial debe sobrevivir, se cambia a borrado lógico.
 - **Reprogramar sin reconfirmar:** cualquiera de los dos puede mover la fecha de una sesión
@@ -179,9 +203,9 @@ refinamiento descrito en [2. Prompts de IA](02-prompts-ia.md).
 
 ## 1.8 Script SQL completo
 
-<!-- INCLUIR: ../supabase/migrations/20261027000855_inicializar_esquema.sql -->
+<!-- INCLUIR: ../supabase/migrations/20261027004403_inicializar_esquema.sql -->
 ````sql
--- supabase/migrations/20261027000855_inicializar_esquema.sql
+-- supabase/migrations/20261027004403_inicializar_esquema.sql
 -- MentorLink: esquema inicial (perfiles, sesiones, mensajes) con RLS y privilegios explícitos.
 
 -- =====================================================================
@@ -266,6 +290,10 @@ create trigger sesiones_fijar_actualizado_en
   for each row execute function public.fijar_actualizado_en();
 
 -- 4.2 Crear el perfil al registrarse (patrón oficial de Supabase)
+--   El rol NO se toma de raw_user_meta_data: ese campo lo escribe el cliente en signUp
+--   (options.data), así que cualquiera podría registrarse como mentor. Todo registro nace
+--   'estudiante'; promover a mentor es una acción administrativa con service_role
+--   (backend o SQL del Dashboard), porque authenticated no tiene UPDATE sobre perfiles.rol.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -275,7 +303,6 @@ as $$
 declare
   v_meta   jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   v_nombre text;
-  v_rol    public.rol_usuario;
 begin
   v_nombre := coalesce(
     nullif(pg_catalog.btrim(v_meta ->> 'nombre'), ''),
@@ -285,14 +312,8 @@ begin
   );
   v_nombre := pg_catalog.left(v_nombre, 120);
 
-  v_rol := case
-             when v_meta ->> 'rol' in ('mentor', 'estudiante')
-               then (v_meta ->> 'rol')::public.rol_usuario
-             else 'estudiante'::public.rol_usuario
-           end;
-
   insert into public.perfiles (id, nombre, rol)
-  values (new.id, v_nombre, v_rol);
+  values (new.id, v_nombre, 'estudiante'::public.rol_usuario);
 
   return new;
 end;

@@ -1,0 +1,31 @@
+# Fecha: 2026-10-26 20:00:47 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase status --agent no
+Not linked.
+Stopped services: [supabase_inbucket_mentorlink-supabase supabase_realtime_mentorlink-supabase supabase_storage_mentorlink-supabase supabase_imgproxy_mentorlink-supabase supabase_pg_meta_mentorlink-supabase supabase_studio_mentorlink-supabase supabase_edge_runtime_mentorlink-supabase supabase_analytics_mentorlink-supabase supabase_vector_mentorlink-supabase supabase_pooler_mentorlink-supabase]
+supabase local development setup is running.
+
+
+╭─────────────────────────────────────────────────╮
+│ 🌐 APIs                                         │
+├─────────────┬───────────────────────────────────┤
+│ Project URL │ http://127.0.0.1:54321            │
+│ REST        │ http://127.0.0.1:54321/rest/v1    │
+│ GraphQL     │ http://127.0.0.1:54321/graphql/v1 │
+╰─────────────┴───────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:<redactado>@127.0.0.1:54322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────╮
+│ 🔑 Authentication Keys                                       │
+├─────────────┬────────────────────────────────────────────────┤
+│ Publishable │ <redactado> │
+│ Secret      │ <redactado>      │
+╰─────────────┴────────────────────────────────────────────────╯
+
+# Código de salida: 0

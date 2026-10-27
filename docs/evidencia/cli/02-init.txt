@@ -1,0 +1,6 @@
+# Fecha: 2026-10-26 19:43:19 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase init
+Finished supabase init.
+# Código de salida: 0

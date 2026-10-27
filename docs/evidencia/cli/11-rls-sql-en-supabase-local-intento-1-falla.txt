@@ -1,0 +1,9 @@
+# Fecha: 2026-10-26 20:01:07 -0500
+# La prueba con avisos (supabase/pruebas/rls.sql) contra la base de supabase start, y el resultado del seed de db reset.
+$ docker exec -i supabase_db_mentorlink-supabase psql -U postgres -X -q -tA -c "select nombre || ' / ' || rol from public.perfiles order by nombre"
+Estudiante Demo / estudiante
+Mentora Demo / mentor
+$ docker exec -i supabase_db_mentorlink-supabase psql -U postgres -X -q < supabase/pruebas/rls.sql
+ERROR:  FALLO 01: un registro nació con un rol distinto de estudiante (el cliente eligió su rol)
+CONTEXT:  PL/pgSQL function inline_code_block line 4 at RAISE
+# Código de salida: 3

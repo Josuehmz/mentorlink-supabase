@@ -1,0 +1,47 @@
+# Fecha: 2026-10-26 20:00:44 -0500
+# Detalle TAP de la misma prueba que corre supabase test db (pg_prove solo imprime el resumen).
+# Base: la de supabase start (contenedor supabase_db_mentorlink-supabase, PostgreSQL 17.11 on x86_64-pc-linux-gnu)
+$ docker exec -i supabase_db_mentorlink-supabase psql -U postgres -X -q -t < supabase/tests/mentorlink_rls_test.sql
+1..41
+ok 1 - RLS está activado en perfiles, sesiones y mensajes
+ok 2 - anon no tiene ningún grant sobre las tres tablas
+ok 3 - authenticated no puede actualizar la columna rol
+ok 4 - todas las políticas están limitadas a authenticated
+ok 5 - toda llamada a auth.uid() en las políticas va envuelta en (select ...)
+ok 6 - handle_new_user crea el perfil con el nombre de los metadatos y rol estudiante
+ok 7 - sin metadatos, el nombre sale de la parte local del correo
+ok 8 - sonda del rol: quien se registra pidiendo rol mentor nace estudiante
+ok 9 - service_role promueve a Ana a mentora
+ok 10 - anon no puede leer sesiones
+ok 11 - anon no puede leer mensajes
+ok 12 - el estudiante agenda una sesión consigo mismo como estudiante; nace pendiente
+ok 13 - el estudiante no puede agendar a nombre de otro estudiante
+ok 14 - no se puede agendar una sesión en el pasado
+ok 15 - el estudiante no puede crear una sesión ya confirmada
+ok 16 - mentor_id debe apuntar a un perfil con rol mentor (trigger)
+ok 17 - un estudiante ve el perfil de los mentores (directorio)
+ok 18 - un estudiante no ve el perfil de otro estudiante ajeno
+ok 19 - el usuario edita su propia bio
+ok 20 - el usuario no puede ascenderse a mentor
+ok 21 - el usuario no edita perfiles ajenos
+ok 22 - el estudiante escribe en su sesión
+ok 23 - nadie escribe un mensaje a nombre de otro (remitente_id = auth.uid())
+ok 24 - los mensajes no se editan
+ok 25 - los mensajes no se borran
+ok 26 - las sesiones no se borran (se cancelan)
+ok 27 - el mentor ve la sesión en la que participa
+ok 28 - el mentor ve el perfil del estudiante con quien comparte sesión
+ok 29 - el mentor confirma la sesión
+ok 30 - el mentor responde en la sesión
+ok 31 - el mentor lee los dos mensajes de su sesión
+ok 32 - un usuario ajeno no ve sesiones de otros
+ok 33 - un usuario ajeno no lee mensajes de otros
+ok 34 - un usuario ajeno no ve al estudiante de otra sesión
+ok 35 - un usuario ajeno no escribe en sesiones de otros
+ok 36 - un usuario ajeno no cambia el estado de sesiones de otros
+ok 37 - el estudiante no puede marcar la sesión como completada
+ok 38 - el estudiante puede cancelar su sesión
+ok 39 - una sesión cancelada no se reabre
+ok 40 - ni siquiera un rol privilegiado crea una sesión cuyo mentor no tiene rol mentor
+ok 41 - mentor y estudiante deben ser personas distintas
+# Código de salida: 0

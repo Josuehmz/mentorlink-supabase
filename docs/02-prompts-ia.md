@@ -12,7 +12,7 @@ exacto y lo que cambió entre una respuesta y otra.
 | 3 | [`prueba-1-respuesta-sin-refinar.txt`](evidencia/prueba-1-respuesta-sin-refinar.txt) | Esa respuesta ejecutada en PostgreSQL 17: 14 comprobaciones bien, falla la 15 |
 | 4 | [`prompt-refinamiento-1.txt`](ia/prompt-refinamiento-1.txt) | Prompt de refinamiento, texto exacto enviado |
 | 5 | [`respuesta-2.md`](ia/respuesta-2.md) | Respuesta literal refinada |
-| 6 | [`20261027000855_inicializar_esquema.sql`](../supabase/migrations/20261027000855_inicializar_esquema.sql) | El SQL de la respuesta 2, sin cambios salvo el nombre de archivo de la línea 1 |
+| 6 | [`20261027004403_inicializar_esquema.sql`](../supabase/migrations/20261027004403_inicializar_esquema.sql) | El SQL de la respuesta 2 más la corrección del rol ([2.5](#25-corrección-tras-la-auditoría-el-rol-ya-no-sale-de-los-metadatos)); nombre real de `supabase migration new` |
 | 7 | [`salida-pruebas-rls.txt`](evidencia/salida-pruebas-rls.txt) | Migración final ejecutada: 25 de 25 en verde |
 
 **Cómo se usó la IA:** cada prompt se envió a una sesión nueva de un asistente de IA (Claude) sin
@@ -149,5 +149,26 @@ Nada más cambió: mismas tablas, tipos, índices, privilegios y nombres de pol�
   search_path = ''` en las cuatro funciones y `to authenticated` en las siete políticas).
 - El formato de salida pedido se cumplió en ambas respuestas: bloque SQL por secciones, tabla de
   políticas y cinco riesgos.
-- Ninguna línea del SQL se editó a mano; la única diferencia entre la respuesta 2 y la migración es
-  el nombre de archivo en el comentario de la línea 1 (la IA puso un timestamp de ejemplo).
+- La respuesta 2 se aplicó tal cual, con una sola corrección posterior hecha a mano tras auditarla
+  (ver 2.5). Fuera de eso, la diferencia entre la respuesta 2 y la migración es el nombre de
+  archivo de la línea 1: la migración lleva el timestamp real que dio `supabase migration new`.
+
+## 2.5 Corrección tras la auditoría: el rol ya no sale de los metadatos
+
+Una auditoría cruzada con una segunda batería de pruebas encontró un hueco que venía **del propio
+prompt maestro**: pedía tomar el rol de `raw_user_meta_data->>'rol'`. Ese campo lo escribe el
+cliente en `signUp({ options: { data } })`, así que cualquiera podía registrarse como `mentor`,
+aparecer en el directorio y recibir y confirmar reservas. La IA cumplió la instrucción y lo
+declaró como riesgo; el error de diseño era nuestro.
+
+| Antes (respuesta 2) | Después (migración) |
+|---|---|
+| `handle_new_user` asigna `mentor` si los metadatos lo piden | `handle_new_user` inserta siempre `'estudiante'` |
+| Riesgo aceptado: «autoasignación de rol» | Promover a mentor es administrativo: `update public.perfiles set rol = 'mentor'` con `service_role` (backend o SQL del Dashboard) |
+
+La sonda que lo demostró quedó como prueba: la 01 de
+[`supabase/pruebas/rls.sql`](../supabase/pruebas/rls.sql) y dos pruebas pgTAP de
+[`supabase/tests/mentorlink_rls_test.sql`](../supabase/tests/mentorlink_rls_test.sql)
+(«sonda del rol» y «service_role promueve a Ana a mentora»). `authenticated` sigue sin privilegio
+`UPDATE` sobre `perfiles.rol` (prueba 12), así que nadie se promueve a sí mismo. Las respuestas de
+la IA en [`ia/`](ia/) se conservan literales, con el comportamiento anterior.

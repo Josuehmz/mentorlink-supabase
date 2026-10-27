@@ -1,0 +1,60 @@
+# Fecha: 2026-10-26 19:44:22 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit,postgres-meta --agent no
+# (omitidas 211 líneas de progreso de descarga de capas de Docker: '<hash>: Pull complete' y 'Digest:')
+2.8.1: Pulling from supabase/kong
+17.11.0.006: Pulling from supabase/postgres
+v2.197.0: Pulling from supabase/gotrue
+v16.5: Pulling from supabase/postgrest
+Status: Downloaded newer image for public.ecr.aws/supabase/gotrue:v2.197.0
+public.ecr.aws/supabase/gotrue:v2.197.0
+Status: Downloaded newer image for public.ecr.aws/supabase/postgrest:v16.5
+public.ecr.aws/supabase/postgrest:v16.5
+Status: Downloaded newer image for public.ecr.aws/supabase/kong:2.8.1
+public.ecr.aws/supabase/kong:2.8.1
+Status: Downloaded newer image for public.ecr.aws/supabase/postgres:17.11.0.006
+public.ecr.aws/supabase/postgres:17.11.0.006
+Starting database...
+Initialising schema...
+v2.147.1: Pulling from supabase/realtime
+Status: Downloaded newer image for public.ecr.aws/supabase/realtime:v2.147.1
+public.ecr.aws/supabase/realtime:v2.147.1
+v1.84.19: Pulling from supabase/storage-api
+Status: Downloaded newer image for public.ecr.aws/supabase/storage-api:v1.84.19
+public.ecr.aws/supabase/storage-api:v1.84.19
+Seeding globals from roles.sql...
+Applying migration 20261027004403_inicializar_esquema.sql...
+Seeding data from supabase/seed.sql...
+Starting containers...
+Waiting for health checks...
+Started supabase local development setup.
+
+
+╭─────────────────────────────────────────────────╮
+│ 🌐 APIs                                         │
+├─────────────┬───────────────────────────────────┤
+│ Project URL │ http://127.0.0.1:54321            │
+│ REST        │ http://127.0.0.1:54321/rest/v1    │
+│ GraphQL     │ http://127.0.0.1:54321/graphql/v1 │
+╰─────────────┴───────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:<redactado>@127.0.0.1:54322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────╮
+│ 🔑 Authentication Keys                                       │
+├─────────────┬────────────────────────────────────────────────┤
+│ Publishable │ <redactado> │
+│ Secret      │ <redactado>      │
+╰─────────────┴────────────────────────────────────────────────╯
+
+Local dev security notice
+All services bind to 0.0.0.0 (network-accessible, not just localhost)
+API keys and JWT secrets are shared defaults. Do not use in production
+Studio, pgMeta (/pg/*), and analytics have no authentication
+
+# Código de salida: 0

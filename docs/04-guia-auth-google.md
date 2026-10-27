@@ -30,9 +30,17 @@ Uso desde el cliente:
 await supabase.auth.signUp({
   email: 'estudiante@ejemplo.com',
   password: '<contraseña>',
-  options: { data: { nombre: 'Nombre Apellido', rol: 'estudiante' } }, // lo lee handle_new_user
+  options: { data: { nombre: 'Nombre Apellido' } }, // handle_new_user toma el nombre
 })
 await supabase.auth.signInWithPassword({ email: 'estudiante@ejemplo.com', password: '<contraseña>' })
+```
+
+Todo registro nace `estudiante`, aunque `options.data` traiga un `rol`: ese campo lo controla el
+cliente y `handle_new_user` lo ignora. Para que alguien sea mentor, un administrador lo promueve
+con `service_role` (backend o SQL del Dashboard):
+
+```sql
+update public.perfiles set rol = 'mentor' where id = '<uuid-del-usuario>';
 ```
 
 ## 4.2 Google OAuth en 3 pasos
@@ -101,8 +109,10 @@ secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 
 En local, el redirect autorizado en Google es `http://127.0.0.1:54321/auth/v1/callback`.
 Las variables van en un `.env` que no se sube (ver [`.env.example`](../.env.example)).
-Este fragmento no se probó con la CLI (no está instalada); las claves son las de la referencia de
-configuración.
+El [`supabase/config.toml`](../supabase/config.toml) del repositorio es el que generó `supabase init`
+de verdad (sección 3) y con él corrió `supabase start`. El bloque de Google no se activó ahí
+porque no existe un cliente OAuth real; para activarlo se pega este fragmento y se llenan las
+variables del `.env`. Esta parte (el login con Google) no se probó.
 
 ## Fuentes
 

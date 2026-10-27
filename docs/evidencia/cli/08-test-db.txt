@@ -1,0 +1,11 @@
+# Fecha: 2026-10-26 20:00:21 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase test db --agent no
+Connecting to local database...
+psql:/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql:14: NOTICE:  extension "pgtap" already exists, skipping
+/Users/josue/OneDrive/Documentos/Repositorios/universidad/mentorlink-supabase/supabase/tests/mentorlink_rls_test.sql .. ok
+All tests successful.
+Files=1, Tests=41,  1 wallclock secs ( 0.14 usr  0.09 sys +  0.05 cusr  0.06 csys =  0.34 CPU)
+Result: PASS
+# Código de salida: 0

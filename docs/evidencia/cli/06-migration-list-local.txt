@@ -1,0 +1,12 @@
+# Fecha: 2026-10-26 19:59:11 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase migration list --local --agent no
+Connecting to local database...
+
+  
+   Local            | Remote           | Time (UTC)            
+  ------------------|------------------|-----------------------
+   `20261027004403` | `20261027004403` | `2026-10-27 00:44:03` 
+
+# Código de salida: 0

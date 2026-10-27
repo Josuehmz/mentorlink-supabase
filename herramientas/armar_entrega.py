@@ -50,10 +50,11 @@ Este documento reúne los cuatro entregables del enunciado, en orden, más la au
 | Guía de configuración Auth (3 pasos para Google) | [4. Guía de configuración de Auth](#4-guía-de-configuración-de-auth-emailpassword-y-google) |
 | Auditoría IA (cuatro ejes) | [5. Auditoría IA](#5-auditoría-ia-los-cuatro-ejes) |
 
-Honestidad sobre lo simulado: los comandos de la CLI de Supabase no se ejecutaron (no está
-instalada) y su salida es la esperada según la documentación. El SQL sí se ejecutó: la migración y
-25 comprobaciones de RLS corrieron en PostgreSQL 17 (Docker). No existe un proyecto remoto de
-Supabase; `<project-ref>` y las credenciales de Google son marcadores.
+Qué se ejecutó y qué no: la CLI de Supabase 2.122.0 se ejecutó en local (`init`, `migration new`,
+`start`, `db reset`, `migration list --local`, `test db`, `stop`); `supabase test db` pasó las 41
+pruebas pgTAP y la salida de cada comando está en `docs/evidencia/cli/`. Los pasos de la nube
+(`login`, `link`, `db push`) no se ejecutaron porque no existe un proyecto en la nube;
+`<project-ref>` y las credenciales de Google son marcadores.
 
 """
 

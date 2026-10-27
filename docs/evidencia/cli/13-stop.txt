@@ -1,0 +1,7 @@
+# Fecha: 2026-10-26 20:02:14 -0500
+# CLI: supabase 2.122.0 (Windows 11, Docker Desktop)
+# Carpeta: mentorlink-supabase/
+$ supabase stop --no-backup --agent no
+Stopping containers...
+Stopped supabase local development setup.
+# Código de salida: 0

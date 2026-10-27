@@ -1,0 +1,27 @@
+== Servidor: PostgreSQL 17.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+== 1. Stub de Supabase (roles, auth.users, auth.uid(), privilegios por defecto)
+== 2. Migración: docs/ia/respuesta-1-migracion.sql
+   tablas: mensajes (rls=true), perfiles (rls=true), sesiones (rls=true)
+   políticas: 7
+== 3. Seed (dentro de una transacción revertida)
+perfiles creados por el seed: 2
+== 4. Pruebas de RLS: supabase/pruebas/rls.sql
+NOTICE:  OK 01 handle_new_user crea los 4 perfiles con rol y nombre correctos (rol "admin" -> estudiante)
+NOTICE:  OK 02 anon no tiene privilegios sobre perfiles (permission denied)
+NOTICE:  OK 02 anon no tiene privilegios sobre mensajes (permission denied)
+NOTICE:  OK 03 Beto ve su perfil y el directorio de mentores, no a otros estudiantes
+NOTICE:  OK 04 Beto solicita una sesión con Ana (pendiente, fecha futura)
+NOTICE:  OK 05 Beto no puede crear sesiones a nombre de otra estudiante (RLS)
+NOTICE:  OK 06 no se puede solicitar una sesión con fecha pasada (RLS)
+NOTICE:  OK 07 una sesión nueva solo puede nacer pendiente (RLS)
+NOTICE:  OK 08 mentor_id debe tener rol mentor (trigger validar_roles_sesion)
+NOTICE:  OK 09 Beto escribe en su sesión
+NOTICE:  OK 10 nadie puede enviar mensajes con otro remitente_id (RLS)
+NOTICE:  OK 11 un mensaje vacío lo rechaza el check de contenido
+NOTICE:  OK 12 nadie puede cambiar su rol desde el cliente (privilegio por columna)
+NOTICE:  OK 13 Beto edita su bio y no la de Ana (0 filas)
+NOTICE:  OK 14 los mensajes no se editan (sin privilegio UPDATE)
+NOTICE:  OK 14 los mensajes no se borran (sin privilegio DELETE)
+NOTICE:  OK 14 las sesiones no se borran, se cancelan (sin privilegio DELETE)
+ERROR:  FALLO 15: el estudiante confirmó su propia sesión
+CONTEXT:  PL/pgSQL function inline_code_block line 35 at RAISE
